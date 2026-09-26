@@ -4,7 +4,8 @@
 > A production-grade SaaS inventory management application designed to digitize and centralize stock operations across multiple warehouses, locations, and teams.
 
 ---
-
+## team Contribution
+Hackathon development branch.
 ## 🚀 Key Highlights & Architectural Principles
 
 - **True Multi-Warehouse & Location Hierarchy**: Physical stock is never floating. Stock is strictly mapped as `Product -> Warehouse -> Location -> Stock Quantity`.
