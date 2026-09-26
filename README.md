@@ -6,6 +6,23 @@
 ---
 ## team Contribution
 Hackathon development branch.
+
+## Project Status
+
+🚧 Currently under active development for the hackathon.
+
+## Development Workflow
+
+1. Create a feature branch.
+2. Make and test changes.
+3. Commit the changes.
+4. Push the branch.
+5. Create a pull request for review.
+
+## Team Development
+
+This project is being developed collaboratively using Git and GitHub.
+
 ## 🚀 Key Highlights & Architectural Principles
 
 - **True Multi-Warehouse & Location Hierarchy**: Physical stock is never floating. Stock is strictly mapped as `Product -> Warehouse -> Location -> Stock Quantity`.
