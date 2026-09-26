@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Boxes, Lock, Mail, User, ShieldCheck, UserCheck, ArrowRight } from "lucide-react";
+import { Boxes, Lock, Mail, User, ShieldCheck, UserCheck, CheckCircle2, ArrowRight, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
@@ -16,9 +16,20 @@ export default function SignupPage() {
   const [role, setRole] = useState<"INVENTORY_MANAGER" | "WAREHOUSE_STAFF">("INVENTORY_MANAGER");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [successInfo, setSuccessInfo] = useState<{ message: string; requiresEmailConfirmation: boolean } | null>(null);
+  const [supabaseConfigured, setSupabaseConfigured] = useState(false);
 
   const router = useRouter();
   const toast = useToast();
+
+  useEffect(() => {
+    fetch("/api/auth/config")
+      .then((res) => res.json())
+      .then((data) => {
+        setSupabaseConfigured(Boolean(data.supabaseConfigured));
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,9 +63,17 @@ export default function SignupPage() {
         setError(data.error || "Failed to create account");
         toast.error("Registration Failed", data.error);
       } else {
-        toast.success("Account Created!", "Welcome to StockSense.");
-        router.push("/dashboard");
-        router.refresh();
+        if (data.requiresEmailConfirmation) {
+          setSuccessInfo({
+            message: data.message || "Please check your email inbox to confirm your account before logging in.",
+            requiresEmailConfirmation: true,
+          });
+          toast.success("Account Created!", "Verification email sent.");
+        } else {
+          toast.success("Account Created!", "Welcome to StockSense.");
+          router.push("/dashboard");
+          router.refresh();
+        }
       }
     } catch {
       setError("An unexpected error occurred. Please try again.");
@@ -72,139 +91,183 @@ export default function SignupPage() {
             <Boxes className="w-8 h-8" />
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">StockSense</h1>
-          <p className="text-xs text-slate-400 mt-0.5">Know Your Stock. Control Your Flow.</p>
+          <p className="text-sm text-slate-400 mt-1 font-medium">
+            Know Your Stock. Control Your Flow.
+          </p>
+
+          {/* Supabase Status Pill */}
+          <div className="mt-3 flex justify-center">
+            {supabaseConfigured ? (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                Supabase Auth Active
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium bg-slate-800/80 text-slate-400 border border-slate-700">
+                <span className="w-2 h-2 rounded-full bg-amber-400" />
+                Local & Supabase Auth Supported
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Card */}
         <div className="bg-white rounded-3xl p-8 shadow-2xl border border-slate-100">
-          <div className="mb-6">
-            <h2 className="text-lg font-bold text-slate-900">Create new account</h2>
-            <p className="text-xs text-slate-500 mt-0.5">Join your organization&apos;s inventory management system</p>
-          </div>
-
-          {error && (
-            <div className="mb-5 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-medium">
-              {error}
+          {successInfo ? (
+            <div className="text-center py-6 space-y-4">
+              <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
+                <CheckCircle2 className="w-8 h-8" />
+              </div>
+              <h2 className="text-lg font-bold text-slate-900">Check Your Email</h2>
+              <p className="text-xs text-slate-600 leading-relaxed max-w-xs mx-auto">
+                {successInfo.message}
+              </p>
+              <div className="pt-4">
+                <Link href="/login">
+                  <Button className="w-full">Proceed to Sign In</Button>
+                </Link>
+              </div>
             </div>
+          ) : (
+            <>
+              <div className="mb-6">
+                <h2 className="text-lg font-bold text-slate-900">Create new account</h2>
+                <p className="text-xs text-slate-500 mt-0.5">Enter your details to join your warehouse team</p>
+              </div>
+
+              {error && (
+                <div className="mb-5 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-medium">
+                  {error}
+                </div>
+              )}
+
+              <form onSubmit={handleSignup} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                    Full Name
+                  </label>
+                  <div className="relative">
+                    <User className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+                    <Input
+                      placeholder="Alex Morgan"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="pl-9 h-10"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                    Work Email
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+                    <Input
+                      type="email"
+                      placeholder="alex@company.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-9 h-10"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                    Role in Organization
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setRole("INVENTORY_MANAGER")}
+                      className={`flex items-center p-2.5 rounded-xl border text-left transition-all ${
+                        role === "INVENTORY_MANAGER"
+                          ? "border-brand-600 bg-brand-50/60 ring-2 ring-brand-500/20"
+                          : "border-slate-200 hover:border-slate-300"
+                      }`}
+                    >
+                      <ShieldCheck
+                        className={`w-4 h-4 mr-2 ${
+                          role === "INVENTORY_MANAGER" ? "text-brand-600" : "text-slate-400"
+                        }`}
+                      />
+                      <div>
+                        <p className="text-xs font-bold text-slate-800">Manager</p>
+                        <p className="text-[10px] text-slate-500">Full control</p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setRole("WAREHOUSE_STAFF")}
+                      className={`flex items-center p-2.5 rounded-xl border text-left transition-all ${
+                        role === "WAREHOUSE_STAFF"
+                          ? "border-brand-600 bg-brand-50/60 ring-2 ring-brand-500/20"
+                          : "border-slate-200 hover:border-slate-300"
+                      }`}
+                    >
+                      <UserCheck
+                        className={`w-4 h-4 mr-2 ${
+                          role === "WAREHOUSE_STAFF" ? "text-brand-600" : "text-slate-400"
+                        }`}
+                      />
+                      <div>
+                        <p className="text-xs font-bold text-slate-800">Staff</p>
+                        <p className="text-[10px] text-slate-500">Operations</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                      Password
+                    </label>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+                      <Input
+                        type="password"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="pl-9 h-10 text-xs"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                      Confirm
+                    </label>
+                    <Input
+                      type="password"
+                      placeholder="••••••••"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="h-10 text-xs"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <Button type="submit" className="w-full h-10 font-semibold" disabled={isLoading}>
+                  {isLoading ? "Creating Account..." : "Create Account"}
+                </Button>
+              </form>
+            </>
           )}
-
-          <form onSubmit={handleSignup} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
-                Full Name
-              </label>
-              <div className="relative">
-                <User className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
-                <Input
-                  type="text"
-                  placeholder="e.g. Alex Morgan"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="pl-9 h-10"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
-                Work Email
-              </label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
-                <Input
-                  type="email"
-                  placeholder="alex@stocksense.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-9 h-10"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
-                Select Your Role
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setRole("INVENTORY_MANAGER")}
-                  className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all ${
-                    role === "INVENTORY_MANAGER"
-                      ? "border-brand-600 bg-brand-50/80 text-brand-900 ring-1 ring-brand-500"
-                      : "border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700"
-                  }`}
-                >
-                  <ShieldCheck className={`w-5 h-5 mb-1 ${role === "INVENTORY_MANAGER" ? "text-brand-600" : "text-slate-400"}`} />
-                  <span className="text-xs font-bold">Manager</span>
-                  <span className="text-[10px] text-slate-500">Full operational control</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setRole("WAREHOUSE_STAFF")}
-                  className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all ${
-                    role === "WAREHOUSE_STAFF"
-                      ? "border-brand-600 bg-brand-50/80 text-brand-900 ring-1 ring-brand-500"
-                      : "border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700"
-                  }`}
-                >
-                  <UserCheck className={`w-5 h-5 mb-1 ${role === "WAREHOUSE_STAFF" ? "text-brand-600" : "text-slate-400"}`} />
-                  <span className="text-xs font-bold">Staff</span>
-                  <span className="text-[10px] text-slate-500">Floor & execution focus</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
-                  <Input
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-9 h-10"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Confirm
-                </label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
-                  <Input
-                    type="password"
-                    placeholder="••••••••"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="pl-9 h-10"
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-
-            <Button type="submit" className="w-full h-10 mt-2" isLoading={isLoading}>
-              Create Account <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          </form>
         </div>
 
         {/* Footer */}
         <p className="text-center text-xs text-slate-400 mt-6">
           Already have an account?{" "}
-          <Link href="/login" className="text-brand-400 hover:text-brand-300 font-semibold underline underline-offset-4">
-            Sign in instead
+          <Link href="/login" className="text-white hover:underline font-semibold">
+            Sign in
           </Link>
         </p>
       </div>

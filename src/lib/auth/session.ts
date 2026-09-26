@@ -1,5 +1,7 @@
 import { cookies } from "next/headers";
 import crypto from "crypto";
+import prisma from "@/lib/db/prisma";
+import { createClient as createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
 export interface SessionUser {
   id: string;
@@ -53,6 +55,52 @@ export function verifySessionToken(token: string): SessionUser | null {
 
 export async function getCurrentUser(): Promise<SessionUser | null> {
   try {
+    // 1. Check Supabase Auth if configured
+    if (isSupabaseConfigured()) {
+      try {
+        const supabase = createSupabaseServerClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user && user.email) {
+          const email = user.email.toLowerCase().trim();
+          const metaName =
+            user.user_metadata?.name ||
+            user.user_metadata?.full_name ||
+            email.split("@")[0];
+          const metaRole =
+            user.user_metadata?.role === "INVENTORY_MANAGER"
+              ? "INVENTORY_MANAGER"
+              : "WAREHOUSE_STAFF";
+
+          // Sync with local Prisma User table to preserve relational integrity
+          const dbUser = await prisma.user.upsert({
+            where: { email },
+            update: {
+              name: metaName,
+              role: metaRole,
+            },
+            create: {
+              email,
+              name: metaName,
+              role: metaRole,
+              password: "supabase_managed_auth",
+            },
+          });
+
+          return {
+            id: dbUser.id,
+            name: dbUser.name,
+            email: dbUser.email,
+            role: dbUser.role as "INVENTORY_MANAGER" | "WAREHOUSE_STAFF",
+            avatarUrl: dbUser.avatarUrl,
+          };
+        }
+      } catch (sbErr) {
+        console.warn("Supabase auth check error, falling back to local cookie:", sbErr);
+      }
+    }
+
+    // 2. Fallback to local cookie token
     const cookieStore = cookies();
     const token = cookieStore.get(COOKIE_NAME)?.value;
     if (!token) return null;
