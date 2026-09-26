@@ -1,1 +1,4 @@
 
+1.Fixed notification settings so saved “off” choices stay off after reloading.
+2.Improved global search keyboard navigation by highlighting the selected result and making results keyboard-accessible.
+3.Added an accessible label to the toast dismiss button.
