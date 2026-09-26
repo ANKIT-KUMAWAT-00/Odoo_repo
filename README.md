@@ -4,7 +4,7 @@
 > A production-grade SaaS inventory management application designed to digitize and centralize stock operations across multiple warehouses, locations, and teams.
 
 ---
-## team Contribution
+## Team Contribution
 Hackathon development branch.
 
 ## Project Status
