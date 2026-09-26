@@ -110,8 +110,10 @@ export function GlobalSearchModal({
           />
           {isLoading && <Loader2 className="w-4 h-4 text-brand-600 animate-spin mr-2" />}
           <button
+            type="button"
             onClick={onClose}
             className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg"
+            aria-label="Close search"
           >
             <X className="w-4 h-4" />
           </button>
@@ -137,10 +139,13 @@ export function GlobalSearchModal({
               </div>
               <div className="space-y-1 mt-1">
                 {grouped.products.map((item, idx) => (
-                  <div
+                  <button
+                    type="button"
                     key={item.id}
                     onClick={() => handleSelect(item.url)}
-                    className="flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-100 cursor-pointer transition-colors"
+                    className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-colors ${
+                      results[selectedIndex] === item ? "bg-brand-50 ring-1 ring-brand-200" : "hover:bg-slate-100"
+                    }`}
                   >
                     <div className="flex items-center space-x-3">
                       <div className="p-2 rounded-lg bg-brand-50 text-brand-600">
@@ -156,7 +161,7 @@ export function GlobalSearchModal({
                         {item.badge}
                       </span>
                     )}
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -169,10 +174,13 @@ export function GlobalSearchModal({
               </div>
               <div className="space-y-1 mt-1">
                 {[...grouped.receipts, ...grouped.deliveries].map((item) => (
-                  <div
+                  <button
+                    type="button"
                     key={item.id}
                     onClick={() => handleSelect(item.url)}
-                    className="flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-100 cursor-pointer transition-colors"
+                    className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-colors ${
+                      results[selectedIndex] === item ? "bg-brand-50 ring-1 ring-brand-200" : "hover:bg-slate-100"
+                    }`}
                   >
                     <div className="flex items-center space-x-3">
                       <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
@@ -188,7 +196,7 @@ export function GlobalSearchModal({
                         {item.badge}
                       </span>
                     )}
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -201,10 +209,13 @@ export function GlobalSearchModal({
               </div>
               <div className="space-y-1 mt-1">
                 {[...grouped.transfers, ...grouped.adjustments].map((item) => (
-                  <div
+                  <button
+                    type="button"
                     key={item.id}
                     onClick={() => handleSelect(item.url)}
-                    className="flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-100 cursor-pointer transition-colors"
+                    className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-colors ${
+                      results[selectedIndex] === item ? "bg-brand-50 ring-1 ring-brand-200" : "hover:bg-slate-100"
+                    }`}
                   >
                     <div className="flex items-center space-x-3">
                       <div className="p-2 rounded-lg bg-amber-50 text-amber-600">
@@ -224,7 +235,7 @@ export function GlobalSearchModal({
                         {item.badge}
                       </span>
                     )}
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
