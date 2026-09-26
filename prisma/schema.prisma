@@ -1,0 +1,307 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  password     String
+  role         String   @default("WAREHOUSE_STAFF") // INVENTORY_MANAGER | WAREHOUSE_STAFF
+  phone        String?
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  status      String    @default("ACTIVE")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+}
+
+model Warehouse {
+  id          String             @id @default(cuid())
+  name        String
+  code        String             @unique
+  address     String?
+  manager     String?
+  contact     String?
+  status      String             @default("ACTIVE")
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  locations   Location[]
+  stocks      Stock[]
+  receipts    Receipt[]
+  deliveries  DeliveryOrder[]
+  reorders    ReorderRule[]
+  adjustments InventoryAdjustment[]
+}
+
+model Location {
+  id          String             @id @default(cuid())
+  name        String
+  code        String
+  warehouseId String
+  warehouse   Warehouse          @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  type        String             @default("STORAGE") // STORAGE, RECEIVING, PRODUCTION, DISPATCH, DAMAGED, TRANSIT
+  capacity    Int                @default(1000)
+  status      String             @default("ACTIVE")
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  stocks      Stock[]
+  receipts    Receipt[]
+  deliveries  DeliveryOrder[]
+  reorders    ReorderRule[]
+  adjustments InventoryAdjustment[]
+
+  @@unique([warehouseId, code])
+}
+
+model Product {
+  id                 String                @id @default(cuid())
+  name               String
+  sku                String                @unique
+  barcode            String?
+  categoryId         String
+  category           Category              @relation(fields: [categoryId], references: [id])
+  uom                String                @default("units")
+  description        String?
+  defaultWarehouseId String?
+  defaultLocationId  String?
+  reorderLevel       Int                   @default(20)
+  reorderQuantity    Int                   @default(50)
+  minStock           Int                   @default(10)
+  maxStock           Int                   @default(500)
+  status             String                @default("ACTIVE")
+  imageUrl           String?
+  supplier           String?
+  costPrice          Float                 @default(0.0)
+  sellingPrice       Float                 @default(0.0)
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  stocks             Stock[]
+  receiptItems       ReceiptItem[]
+  deliveryItems      DeliveryItem[]
+  transferItems      TransferItem[]
+  adjustments        InventoryAdjustment[]
+  reorderRules       ReorderRule[]
+}
+
+model Stock {
+  id               String    @id @default(cuid())
+  productId        String
+  product          Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouseId      String
+  warehouse        Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  locationId       String
+  location         Location  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  quantity         Int       @default(0)
+  reservedQuantity Int       @default(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([productId, locationId])
+}
+
+model Receipt {
+  id                    String        @id @default(cuid())
+  receiptNumber         String        @unique // REC-00001
+  supplier              String
+  warehouseId           String
+  warehouse             Warehouse     @relation(fields: [warehouseId], references: [id])
+  destinationLocationId String
+  destinationLocation   Location      @relation(fields: [destinationLocationId], references: [id])
+  expectedDate          DateTime?
+  notes                 String?
+  status                String        @default("DRAFT") // DRAFT, WAITING, READY, IN_PROGRESS, DONE, CANCELED
+  createdByUserId       String?
+  validatedAt           DateTime?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  items                 ReceiptItem[]
+}
+
+model ReceiptItem {
+  id               String  @id @default(cuid())
+  receiptId        String
+  receipt          Receipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  productId        String
+  product          Product @relation(fields: [productId], references: [id])
+  expectedQuantity Int
+  receivedQuantity Int     @default(0)
+  unit             String
+  batchLot         String?
+}
+
+model DeliveryOrder {
+  id               String         @id @default(cuid())
+  deliveryNumber   String         @unique // DEL-00001
+  customer         String
+  warehouseId      String
+  warehouse        Warehouse      @relation(fields: [warehouseId], references: [id])
+  sourceLocationId String
+  sourceLocation   Location       @relation(fields: [sourceLocationId], references: [id])
+  deliveryDate     DateTime?
+  notes            String?
+  status           String         @default("DRAFT") // DRAFT, WAITING, READY, PICKING, PACKING, DONE, CANCELED
+  assignedToUserId String?
+  createdByUserId  String?
+  validatedAt      DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  items            DeliveryItem[]
+}
+
+model DeliveryItem {
+  id                String        @id @default(cuid())
+  deliveryId        String
+  delivery          DeliveryOrder @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  productId         String
+  product           Product       @relation(fields: [productId], references: [id])
+  requestedQuantity Int
+  pickedQuantity    Int           @default(0)
+  unit              String
+}
+
+model InternalTransfer {
+  id                     String         @id @default(cuid())
+  transferNumber         String         @unique // TRF-00001
+  sourceWarehouseId      String
+  sourceLocationId       String
+  destinationWarehouseId String
+  destinationLocationId  String
+  scheduledDate          DateTime?
+  assignedUserId         String?
+  status                 String         @default("DRAFT") // DRAFT, READY, IN_PROGRESS, DONE, CANCELED
+  notes                  String?
+  validatedAt            DateTime?
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+  items                  TransferItem[]
+}
+
+model TransferItem {
+  id         String           @id @default(cuid())
+  transferId String
+  transfer   InternalTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product          @relation(fields: [productId], references: [id])
+  quantity   Int
+  unit       String
+}
+
+model InventoryAdjustment {
+  id               String    @id @default(cuid())
+  adjustmentNumber String    @unique // ADJ-00001
+  warehouseId      String
+  warehouse        Warehouse @relation(fields: [warehouseId], references: [id])
+  locationId       String
+  location         Location  @relation(fields: [locationId], references: [id])
+  productId        String
+  product          Product   @relation(fields: [productId], references: [id])
+  systemQuantity   Int
+  countedQuantity  Int
+  difference       Int
+  reason           String    // DAMAGED, LOST, FOUND, COUNTING_ERROR, EXPIRED, OTHER
+  notes            String?
+  status           String    @default("DONE")
+  userId           String?
+  createdAt        DateTime  @default(now())
+}
+
+model StockMovement {
+  id                       String   @id @default(cuid())
+  timestamp                DateTime @default(now())
+  reference                String   // REC-00001, DEL-00001, TRF-00001, ADJ-00001
+  operationType            String   // RECEIPT, DELIVERY, TRANSFER, ADJUSTMENT
+  productId                String
+  sku                      String
+  productName              String
+  quantity                 Int      // + for incoming, - for outgoing
+  sourceWarehouseName      String?
+  sourceLocationName       String?
+  destinationWarehouseName String?
+  destinationLocationName  String?
+  warehouseId              String?
+  locationId               String?
+  userId                   String?
+  userName                 String?
+  status                   String   @default("COMPLETED")
+  notes                    String?
+}
+
+model ReorderRule {
+  id                String     @id @default(cuid())
+  productId         String
+  product           Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouseId       String?
+  warehouse         Warehouse? @relation(fields: [warehouseId], references: [id])
+  locationId        String?
+  location          Location?  @relation(fields: [locationId], references: [id])
+  minQuantity       Int        @default(10)
+  reorderPoint      Int        @default(20)
+  maxQuantity       Int        @default(100)
+  reorderQuantity   Int        @default(50)
+  preferredSupplier String?
+  status            String     @default("ACTIVE")
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  title     String
+  message   String
+  type      String   // LOW_STOCK, OUT_OF_STOCK, PENDING_RECEIPT, PENDING_DELIVERY, TRANSFER_SCHEDULED, ADJUSTMENT_COMPLETED, SYSTEM
+  isRead    Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  userName  String
+  action    String
+  entity    String
+  entityId  String?
+  oldValue  String?
+  newValue  String?
+  timestamp DateTime @default(now())
+}
+
+model Setting {
+  id                     String   @id @default("global")
+  companyName            String   @default("StockSense Logistics Ltd.")
+  companyEmail           String   @default("ops@stocksense.io")
+  currency               String   @default("USD ($)")
+  timezone               String   @default("UTC")
+  defaultWarehouseId     String?
+  defaultLocationId      String?
+  allowNegativeStock     Boolean  @default(false)
+  automaticReorderAlerts Boolean  @default(true)
+  notifyLowStock         Boolean  @default(true)
+  notifyDeliveries       Boolean  @default(true)
+  notifyReceipts         Boolean  @default(true)
+  notifyTransfers        Boolean  @default(true)
+  updatedAt              DateTime @updatedAt
+}
+
+model OtpToken {
+  id        String   @id @default(cuid())
+  email     String
+  otp       String
+  expiresAt DateTime
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
