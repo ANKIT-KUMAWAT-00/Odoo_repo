@@ -62,11 +62,11 @@ export default function SettingsPage() {
           setDefaultWarehouseId(s.defaultWarehouseId || "");
           setDefaultLocationId(s.defaultLocationId || "");
           setAllowNegativeStock(s.allowNegativeStock || false);
-          setAutomaticReorderAlerts(s.automaticReorderAlerts || true);
-          setNotifyLowStock(s.notifyLowStock || true);
-          setNotifyDeliveries(s.notifyDeliveries || true);
-          setNotifyReceipts(s.notifyReceipts || true);
-          setNotifyTransfers(s.notifyTransfers || true);
+          setAutomaticReorderAlerts(s.automaticReorderAlerts ?? true);
+          setNotifyLowStock(s.notifyLowStock ?? true);
+          setNotifyDeliveries(s.notifyDeliveries ?? true);
+          setNotifyReceipts(s.notifyReceipts ?? true);
+          setNotifyTransfers(s.notifyTransfers ?? true);
 
           setUsers(sData.users || []);
         }
